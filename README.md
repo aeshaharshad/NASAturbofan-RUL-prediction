@@ -1,15 +1,7 @@
-# 🛩️ Turbofan Engine RUL Prediction — NASA CMAPSS Dataset
+# Turbofan Engine RUL Prediction — NASA CMAPSS Dataset
 
 <p align="center">
-  <img src="screenshots/actual_vs_predicted.png" width="700"/>
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Python-3.11-blue?style=for-the-badge&logo=python"/>
-  <img src="https://img.shields.io/badge/TensorFlow-2.x-orange?style=for-the-badge&logo=tensorflow"/>
-  <img src="https://img.shields.io/badge/Scikit--Learn-1.x-green?style=for-the-badge&logo=scikit-learn"/>
-  <img src="https://img.shields.io/badge/XGBoost-1.x-red?style=for-the-badge"/>
-  <img src="https://img.shields.io/badge/Status-Complete-brightgreen?style=for-the-badge"/>
+  <img src="Screenshots/actual_vs_predicted.png" width="700"/>
 </p>
 
 ---
