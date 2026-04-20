@@ -58,11 +58,6 @@ LR > 0.80           →  2  (Critical)
 
 All 4 datasets combined → **160,359 rows** → trained Random Forest with RandomizedSearchCV tuning.
 
-<p align="center">
-  <img src="Screenshots/confusion_matrix.png" width="420"/>
-  <br><em>Normalized Confusion Matrix — Tuned Random Forest</em>
-</p>
-
 | Model | Result |
 |-------|--------|
 | Baseline RF | Strong baseline |
@@ -135,6 +130,8 @@ Each model was chosen to answer a specific question:
 | **Attention BiLSTM** | **DL** | **15.38** | **9.72** | **0.8638** |
 
 > 🏆 Attention BiLSTM — **26% RMSE improvement** over best ML model
+<img width="716" height="667" alt="image" src="https://github.com/user-attachments/assets/09bc0b21-4ee2-4356-b28b-ec50cc17e489" />
+
 
 ### vs Published Research (FD001)
 
