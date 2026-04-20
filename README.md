@@ -255,32 +255,32 @@ Output: Predicted RUL (single value)
 ## 📈 Key Visualizations
 
 <p align="center">
-  <img src="screenshots/rul_capping.png" width="600"/>
+  <img src="Screenshots/rul_capping.png" width="600"/>
   <br><em>RUL Distribution Before and After Capping at 125</em>
 </p>
 
 <p align="center">
-  <img src="screenshots/feature_importance.png" width="600"/>
+  <img src="Screenshots/feature_importance.png" width="600"/>
   <br><em>ExtraTreesRegressor Feature Importance</em>
 </p>
 
 <p align="center">
-  <img src="screenshots/forward_selection.png" width="600"/>
+  <img src="Screenshots/forward_selection.png" width="600"/>
   <br><em>Forward Feature Selection — RMSE vs Number of Features</em>
 </p>
 
 <p align="center">
-  <img src="screenshots/final_comparison.png" width="700"/>
+  <img src="Screenshots/final_comparison.png" width="700"/>
   <br><em>Complete Model Benchmark</em>
 </p>
 
 <p align="center">
-  <img src="screenshots/training_history.png" width="700"/>
+  <img src="Screenshots/training_history.png" width="700"/>
   <br><em>LSTM and CNN-LSTM Training History</em>
 </p>
 
 <p align="center">
-  <img src="screenshots/actual_vs_predicted.png" width="700"/>
+  <img src="Screenshots/actual_vs_predicted.png" width="700"/>
   <br><em>Attention BiLSTM — Actual vs Predicted RUL</em>
 </p>
 
