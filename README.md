@@ -1,119 +1,72 @@
-# Turbofan Engine RUL Prediction — NASA CMAPSS Dataset
+# Turbofan Engine RUL Prediction — NASA CMAPSS
 
 <p align="center">
-  <img src="Screenshots/actual_vs_predicted.png" width="700"/>
+  <img src="Screenshots/actual_vs_predicted.png" width="750"/>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.11-blue?style=flat-square&logo=python"/>
+  <img src="https://img.shields.io/badge/TensorFlow-2.x-orange?style=flat-square&logo=tensorflow"/>
+  <img src="https://img.shields.io/badge/Scikit--Learn-1.x-green?style=flat-square&logo=scikit-learn"/>
+  <img src="https://img.shields.io/badge/XGBoost-enabled-red?style=flat-square"/>
+  <img src="https://img.shields.io/badge/Status-Complete-brightgreen?style=flat-square"/>
 </p>
 
 ---
 
-## 📌 Project Overview
+## Overview
 
-This project presents a **complete end-to-end predictive maintenance pipeline** applied to the NASA CMAPSS (Commercial Modular Aero-Propulsion System Simulation) dataset. The goal is to predict the **Remaining Useful Life (RUL)** of turbofan aircraft engines — a safety-critical and industrially relevant problem.
+An end-to-end **predictive maintenance pipeline** on the NASA CMAPSS dataset. Two tasks:
 
-The project is structured into two tasks:
-- 🔵 **Task 1 — Health State Classification:** Classify each engine cycle into one of three health states (Healthy / Degrading / Critical)
-- 🔴 **Task 2 — RUL Regression:** Predict the exact number of remaining operational cycles before engine failure
+- 🔵 **Classification** — Label each engine cycle as Healthy / Degrading / Critical
+- 🔴 **Regression** — Predict exact Remaining Useful Life (RUL) in cycles
 
-Both tasks follow a rigorous ML pipeline:
-**Data Preprocessing → EDA → Feature Selection → ML Baseline → Deep Learning → Evaluation**
+**Best result: RMSE 15.38 cycles — within published research paper benchmarks.**
 
 ---
 
+## Dataset — NASA CMAPSS
 
-## 📚 Dataset — NASA CMAPSS
-
-> **Source:** [NASA Prognostics Data Repository](https://www.nasa.gov/intelligent-systems-division/)
-
-### What is CMAPSS?
-
-CMAPSS simulates a **fleet of aircraft turbofan engines** where each engine is monitored cycle-by-cycle until failure. It is a **multivariate time series** dataset — at every cycle (time step), multiple sensor readings and operational settings are recorded simultaneously.
+Simulates a fleet of aircraft turbofan engines monitored cycle-by-cycle until failure.
+Each row = one cycle snapshot of one engine (sensor readings + operating conditions).
 
 ```
-Engine lifecycle:   Healthy ──► Degradation starts ──► Fault grows ──► FAILURE
+Engine lifecycle:  Healthy ──► Degradation ──► Fault grows ──► FAILURE
 ```
 
-### Data Structure
+| Dataset | Engines | Conditions | Fault Modes | Difficulty |
+|---------|:-------:|:----------:|:-----------:|:----------:|
+| FD001 | 100 | 1 | HPC Degradation | Easy |
+| FD002 | 260 | 6 | HPC Degradation | Medium |
+| FD003 | 100 | 1 | HPC + Fan | Medium |
+| FD004 | 248 | 6 | HPC + Fan | Hard |
 
-Each row in the dataset contains **26 columns**:
-
-| Columns | Description |
-|---------|-------------|
-| Column 1 | Engine ID (Unit Number) |
-| Column 2 | Cycle / Time Step |
-| Columns 3–5 | Operational Settings (altitude, speed, load) |
-| Columns 6–26 | 21 Sensor Measurements |
-
-> ⚠️ Engine IDs are **not shared** across files — Engine 1 in FD001 ≠ Engine 1 in FD002.
-
-### Dataset Variants
-
-| Dataset | Train Engines | Operating Conditions | Fault Modes | Difficulty |
-|---------|:---:|:---:|:---:|:---:|
-| **FD001** | 100 | 1 | 1 — HPC Degradation | Easy |
-| **FD002** | 260 | 6 | 1 — HPC Degradation | Medium |
-| **FD003** | 100 | 1 | 2 — HPC + Fan | Medium |
-| **FD004** | 248 | 6 | 2 — HPC + Fan | Hard |
-
-### Fault Types
-- **HPC Degradation** — High Pressure Compressor damage (affects pressure and temperature sensors)
-- **Fan Degradation** — Airflow system damage (affects fan-related sensor readings)
-
-### Training vs Test Split
-
-| Split | Description |
-|-------|-------------|
-| **Training** | Full engine trajectories run until failure — RUL computed as `failure_cycle − current_cycle` |
-| **Test** | Trajectories cut before failure — model must predict RUL from partial history |
-| **RUL files** | Ground truth remaining cycles for each test engine |
-
-> This simulates the **real-world scenario** where failure has not yet occurred and the system must estimate how much life remains.
+- **Training data** → full run-to-failure trajectories → RUL = `failure_cycle − current_cycle`
+- **Test data** → trajectories cut before failure → model must predict RUL from partial history
 
 ---
 
 ## 🔵 Task 1 — Health State Classification
 
-### Approach
-
-Rather than predicting exact RUL, this task discretizes engine health into **3 classes** using a Life Ratio (LR) metric:
+Engine health discretized into 3 classes using **Life Ratio (LR = Cycle / EOL)**:
 
 ```
-LR = Current Cycle / End-of-Life Cycle
-
-LR ≤ 0.60          →  Label 0  (Healthy)
-0.60 < LR ≤ 0.80   →  Label 1  (Degrading)
-LR > 0.80          →  Label 2  (Critical)
+LR ≤ 0.60           →  0  (Healthy)
+0.60 < LR ≤ 0.80   →  1  (Degrading)
+LR > 0.80           →  2  (Critical)
 ```
 
-### Pipeline
+All 4 datasets combined → **160,359 rows** → trained Random Forest with RandomizedSearchCV tuning.
 
-```
-Raw .txt Files
-     │
-     ▼
-Compute EOL per engine (max cycle)
-     │
-     ▼
-Life Ratio = Cycle / EOL
-     │
-     ▼
-Assign Labels (0 / 1 / 2)
-     │
-     ▼
-Concatenate FD001–FD004  →  160,359 rows
-     │
-     ├──► Baseline Random Forest
-     ├──► Hyperparameter Tuning (RandomizedSearchCV)
-     └──► Tuned RF  →  Confusion Matrix + Accuracy
-```
+<p align="center">
+  <img src="Screenshots/confusion_matrix.png" width="420"/>
+  <br><em>Normalized Confusion Matrix — Tuned Random Forest</em>
+</p>
 
-### Results
-
-| Model | Accuracy |
-|-------|----------|
-| Baseline Random Forest | High baseline |
-| Tuned RF (n=300, depth=20) | **Best Performance** |
-
-📸 **Screenshot to attach:** `confusion_matrix.png` (normalized heatmap from notebook output)
+| Model | Result |
+|-------|--------|
+| Baseline RF | Strong baseline |
+| Tuned RF (n=300, depth=20, samples=0.4) | **Best accuracy** |
 
 ---
 
@@ -122,69 +75,57 @@ Concatenate FD001–FD004  →  160,359 rows
 ### Pipeline
 
 ```
-Raw .txt Files
-     │
-     ▼
- 1. DATA PREPROCESSING
-     ├── Compute EOL + RUL
-     ├── RUL Capping at 125 (standard in literature)
-     └── Train/Test split (shuffle=False — preserves time order)
-     │
-     ▼
- 2. EXPLORATORY DATA ANALYSIS
-     ├── Descriptive statistics
-     ├── Box plots (25 features)
-     ├── RUL distribution (before/after capping)
-     └── Correlation heatmap (25×25)
-     │
-     ▼
- 3. FEATURE SELECTION
-     ├── Correlation filter  →  drop |corr| < 0.5 with RUL  (12 removed)
-     ├── ExtraTreesRegressor →  feature importance ranking
-     └── Forward selection   →  optimal 11 features identified
-     │
-     ▼
- 4. ML MODELS
-     ├── Baseline Random Forest (default params)
-     ├── Tuned Random Forest (RandomizedSearchCV, 3-fold CV)
-     └── XGBoost (RandomizedSearchCV, 3-fold CV)
-     │
-     ▼
- 5. DEEP LEARNING (sequence length = 30 timesteps)
-     ├── LSTM (2-layer, 128→64 units)
-     ├── CNN-LSTM (Conv1D + LSTM)
-     ├── Bidirectional LSTM
-     └── Attention BiLSTM ← Best Model
-     │
-     ▼
- 6. EVALUATION
-     └── RMSE, MAE, R² on held-out test set
+Raw Data → Preprocessing → EDA → Feature Selection → ML Models → Deep Learning → Evaluation
 ```
 
 ### Key Design Decisions
 
-| Decision | Reason |
-|----------|--------|
-| **RUL capped at 125** | Engines show no degradation signal early in life — capping focuses model on the degradation phase. Standard in CMAPSS literature. |
-| **shuffle=False in train/test split** | Preserves temporal order of engine cycles — shuffling would cause data leakage |
-| **Sequence length = 30** | Captures one month of operation cycles; balances context vs sequence length |
-| **MinMaxScaler** | Required for LSTM convergence; fit only on training data to prevent leakage |
+| Decision | Why |
+|----------|-----|
+| **RUL capped at 125 cycles** | Early engine life shows no degradation in sensors — capping removes noise and focuses the model on the degradation phase. Standard in CMAPSS literature. |
+| **shuffle=False in train/test split** | Engine data is time-series — shuffling breaks temporal order and causes data leakage |
+| **MinMaxScaler fit on train only** | Prevents test data statistics from leaking into training |
+| **Sequence length = 30 timesteps** | Gives LSTM enough history to detect degradation trends without excessive padding |
 
-### Selected Features (11 of 25)
+### Feature Selection — 25 → 11 Features
 
-After correlation filtering, ExtraTrees importance, and forward selection:
+Three-stage process to remove noise and keep only informative sensors:
 
 ```
-Cycle, SensorMeasure11, SensorMeasure4,  SensorMeasure12,
-SensorMeasure7, SensorMeasure15, SensorMeasure21,
-SensorMeasure2, SensorMeasure20, SensorMeasure17, SensorMeasure3
+Stage 1 — Correlation filter    →  drop features with |corr| < 0.5 with RUL  (removed 12)
+Stage 2 — ExtraTreesRegressor   →  rank remaining features by importance
+Stage 3 — Forward selection     →  add features one by one, stop when RMSE plateaus
+                                    Result: 11 optimal features
 ```
-> 12 low-information features removed (constant values or |corr| < 0.5 with RUL)
 
-### 📊 Final Results
+<p align="center">
+  <img src="Screenshots/feature_importance.png" width="560"/>
+  <br><em>ExtraTreesRegressor Feature Importance Ranking</em>
+</p>
 
-| Model | Type | RMSE (cycles) | MAE (cycles) | R² |
-|-------|------|:---:|:---:|:---:|
+<p align="center">
+  <img src="Screenshots/forward_selection.png" width="560"/>
+  <br><em>Forward Selection — RMSE plateaus at 11 features</em>
+</p>
+
+### Model Progression
+
+Each model was chosen to answer a specific question:
+
+| Model | Why used |
+|-------|----------|
+| **Baseline RF** | Establish ML ceiling without tuning |
+| **Tuned RF** | Check if hyperparameter tuning helps ML |
+| **XGBoost** | Compare gradient boosting vs bagging |
+| **LSTM** | Capture temporal degradation patterns — ML cannot do this |
+| **CNN-LSTM** | Check if local pattern extraction (CNN) improves LSTM |
+| **BiLSTM** | Process sequence in both directions — future context helps RUL |
+| **Attention BiLSTM** | Learn which timesteps matter most — not all cycles are equally informative |
+
+### Results
+
+| Model | Type | RMSE | MAE | R² |
+|-------|------|:----:|:---:|:--:|
 | Baseline RF | ML | 20.90 | — | 0.7471 |
 | Tuned RF | ML | 20.84 | — | 0.7485 |
 | XGBoost | ML | 21.00 | — | 0.7448 |
@@ -193,122 +134,57 @@ SensorMeasure2, SensorMeasure20, SensorMeasure17, SensorMeasure3
 | BiLSTM | DL | 16.39 | 11.43 | 0.8453 |
 | **Attention BiLSTM** | **DL** | **15.38** | **9.72** | **0.8638** |
 
-> 🏆 **Best Model: Attention BiLSTM** — 26% RMSE improvement over best ML model
+> 🏆 Attention BiLSTM — **26% RMSE improvement** over best ML model
 
-### What RMSE = 15.38 Means in Practice
-
-```
-Engine true RUL  =  100 cycles remaining
-Model prediction =  85–115 cycles        (within ~15 cycle window)
-Error percentage =  ~7.5% of total life  ✅
-```
-
-### Comparison with Published Research (CMAPSS FD001)
+### vs Published Research (FD001)
 
 | Approach | Typical RMSE |
 |----------|:---:|
-| Basic ML (no tuning) | 28–35 |
 | Tuned ML | 20–25 |
 | Standard LSTM | 16–18 |
-| **This Project — Attention BiLSTM** | **15.38** ✅ |
-| Top research papers | 12–14 |
-| State of the art | 10–12 |
-
----
-
-## 🧠 Model Architectures
-
-### Attention BiLSTM (Best Model)
-
-```
-Input: (30 timesteps × 11 features)
-       │
-       ▼
-BiLSTM (64 units, return_sequences=True)  +  BatchNorm  +  Dropout(0.3)
-       │
-       ▼
-BiLSTM (32 units, return_sequences=True)  +  BatchNorm  +  Dropout(0.2)
-       │
-       ▼
-Attention Layer  ←  learns which timesteps matter most for RUL
-       │
-       ▼
-Dense(32, ReLU)  →  Dropout(0.2)  →  Dense(16, ReLU)  →  Dense(1)
-       │
-       ▼
-Output: Predicted RUL (single value)
-```
-
-**Why Attention works here:**
-> Regular LSTMs weigh all timesteps equally. In engine degradation, recent cycles carry more failure-relevant information. The attention mechanism **learns to focus** on the most critical timesteps automatically.
-
----
-
-## 📈 Key Visualizations
-
-<p align="center">
-  <img src="Screenshots/rul_capping.png" width="600"/>
-  <br><em>RUL Distribution Before and After Capping at 125</em>
-</p>
-
-<p align="center">
-  <img src="Screenshots/feature_importance.png" width="600"/>
-  <br><em>ExtraTreesRegressor Feature Importance</em>
-</p>
-
-<p align="center">
-  <img src="Screenshots/forward_selection.png" width="600"/>
-  <br><em>Forward Feature Selection — RMSE vs Number of Features</em>
-</p>
+| **This project** | **15.38** ✅ |
+| Top papers | 12–14 |
 
 <p align="center">
   <img src="Screenshots/final_comparison.png" width="700"/>
-  <br><em>Complete Model Benchmark</em>
+  <br><em>All 7 Models Benchmarked</em>
 </p>
 
 <p align="center">
   <img src="Screenshots/training_history.png" width="700"/>
-  <br><em>LSTM and CNN-LSTM Training History</em>
-</p>
-
-<p align="center">
-  <img src="Screenshots/actual_vs_predicted.png" width="700"/>
-  <br><em>Attention BiLSTM — Actual vs Predicted RUL</em>
+  <br><em>Training and Validation Loss — LSTM and CNN-LSTM</em>
 </p>
 
 ---
 
-## 🛠️ Tech Stack
+## Attention BiLSTM Architecture
 
-| Category | Tools |
-|----------|-------|
-| Language | Python 3.11 |
-| Deep Learning | TensorFlow 2.x, Keras |
-| Machine Learning | Scikit-learn, XGBoost |
-| Data Processing | Pandas, NumPy |
-| Visualization | Matplotlib, Seaborn |
-| Environment | Jupyter Notebook, Miniconda |
-
-
-
----
-
-
-## 📐 Evaluation Metrics
-
-| Metric | Formula | Meaning |
-|--------|---------|---------|
-| **RMSE** | √(mean((y_true − y_pred)²)) | Average prediction error in cycles |
-| **MAE** | mean(\|y_true − y_pred\|) | Median error in cycles |
-| **R²** | 1 − SS_res/SS_tot | % of RUL variance explained by model |
-| **PHM Score** | Asymmetric exponential loss | Penalizes late predictions more than early ones |
+```
+Input (30 timesteps × 11 features)
+    │
+    ▼
+BiLSTM(64) + BatchNorm + Dropout(0.3)   — bidirectional: sees past AND future context
+    │
+    ▼
+BiLSTM(32) + BatchNorm + Dropout(0.2)
+    │
+    ▼
+Attention Layer   — assigns higher weight to cycles where degradation is visible
+    │
+    ▼
+Dense(32) → Dense(16) → Dense(1)        — predicted RUL
+```
 
 ---
 
+## Tech Stack
 
-## 📄 References
+`Python 3.11` · `TensorFlow / Keras` · `Scikit-learn` · `XGBoost` · `Pandas` · `NumPy` · `Matplotlib` · `Seaborn`
 
-1. Saxena, A., Goebel, K., Simon, D., & Eklund, N. (2008). *Damage propagation modeling for aircraft engine run-to-failure simulation*. PHM 2008.
-2. Heimes, F. O. (2008). *Recurrent neural networks for remaining useful life estimation*. PHM 2008.
-3. Li, X., Ding, Q., & Sun, J. Q. (2018). *Remaining useful life estimation in prognostics using deep convolution neural networks*. Reliability Engineering & System Safety.
+---
 
+## References
+
+1. Saxena et al. (2008). *Damage propagation modeling for aircraft engine run-to-failure simulation.* PHM 2008.
+2. Heimes, F. O. (2008). *Recurrent neural networks for remaining useful life estimation.* PHM 2008.
+3. Li, X., Ding, Q., & Sun, J. Q. (2018). *Remaining useful life estimation using deep convolution neural networks.* Reliability Engineering & System Safety.
